@@ -12,7 +12,7 @@ export default function HomePage() {
     <div className="flex flex-col h-screen">
       <header className="bg-white border-b flex-shrink-0">
         <div className="container mx-auto p-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Goal Tree</h1>
+          <h1 className="text-xl font-semibold">Goal Time Money</h1>
           
           {/* Desktop Navigation */}
           <nav className="hidden md:block">
