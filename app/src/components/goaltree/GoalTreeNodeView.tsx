@@ -17,7 +17,6 @@ interface NodeItem {
 interface AddNodeFormProps {
   onClose: () => void;
   onAdd: (node: Omit<NodeItem, 'id' | 'children' | 'parentId'>) => void;
-  parentId?: string;
   parentTitle?: string;
   editNode?: NodeItem | null;
 }
@@ -36,75 +35,80 @@ const AddNodeForm: React.FC<AddNodeFormProps> = ({ onClose, onAdd, parentTitle, 
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-      <div className="bg-white p-6 rounded-lg w-96">
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <h3 className="text-lg font-medium">{editNode ? 'Edit' : 'Add'} Node</h3>
-            {parentTitle && !editNode && (
-              <p className="text-sm text-gray-500">Under: {parentTitle}</p>
-            )}
-          </div>
-          <button onClick={onClose}>
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block mb-1">Title</label>
-            <input
-              type="text"
-              value={newNode.title}
-              onChange={(e) => setNewNode({ ...newNode, title: e.target.value })}
-              className="w-full p-2 border rounded"
-              required
-              autoFocus
-            />
-          </div>
-          <div>
-            <label className="block mb-1">Type</label>
-            <select
-              value={newNode.type}
-              onChange={(e) => setNewNode({ ...newNode, type: e.target.value as NodeItem['type'] })}
-              className="w-full p-2 border rounded"
-            >
-              <option value="task">Task</option>
-              <option value="goal">Goal</option>
-              <option value="project">Project</option>
-              <option value="recurring">Recurring</option>
-              <option value="event">Event</option>
-              <option value="blocker">Blocker</option>
-            </select>
-          </div>
-          <div>
-            <label className="block mb-1">Status</label>
-            <select
-              value={newNode.status}
-              onChange={(e) => setNewNode({ ...newNode, status: e.target.value as NodeItem['status'] })}
-              className="w-full p-2 border rounded"
-            >
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-              <option value="blocked">Blocked</option>
-              <option value="in-progress">In Progress</option>
-            </select>
-          </div>
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg w-full max-w-md mx-auto">
+        <div className="p-4 sm:p-6">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-lg font-medium">{editNode ? 'Edit' : 'Add'} Node</h3>
+              {parentTitle && !editNode && (
+                <p className="text-sm text-gray-500 truncate max-w-[200px]">Under: {parentTitle}</p>
+              )}
+            </div>
+            <button 
               onClick={onClose}
-              className="px-4 py-2 border rounded hover:bg-gray-100"
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
             >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              {editNode ? 'Update' : 'Add'} Node
+              <X className="w-5 h-5" />
             </button>
           </div>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Title</label>
+              <input
+                type="text"
+                value={newNode.title}
+                onChange={(e) => setNewNode({ ...newNode, title: e.target.value })}
+                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Type</label>
+              <select
+                value={newNode.type}
+                onChange={(e) => setNewNode({ ...newNode, type: e.target.value as NodeItem['type'] })}
+                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="task">Task</option>
+                <option value="goal">Goal</option>
+                <option value="project">Project</option>
+                <option value="recurring">Recurring</option>
+                <option value="event">Event</option>
+                <option value="blocker">Blocker</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Status</label>
+              <select
+                value={newNode.status}
+                onChange={(e) => setNewNode({ ...newNode, status: e.target.value as NodeItem['status'] })}
+                className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+                <option value="blocked">Blocked</option>
+                <option value="in-progress">In Progress</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 border rounded-md hover:bg-gray-100 transition-colors text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
+              >
+                {editNode ? 'Update' : 'Add'} Node
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
@@ -166,7 +170,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
     <div className="relative">
       <div 
         className={`
-          flex items-center p-2 my-1 rounded-lg hover:bg-opacity-80 cursor-move group
+          flex items-start flex-wrap md:flex-nowrap p-2 my-1 rounded-lg hover:bg-opacity-80 cursor-move group
           ${isOver ? 'border-2 border-blue-500' : ''}
           ${node.status === 'active' ? 'bg-green-100' : 
             node.status === 'completed' ? 'bg-blue-100' : 
@@ -183,90 +187,71 @@ const TreeNode: React.FC<TreeNodeProps> = ({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        {level > 0 && (
-          <div 
-            className="absolute border-l-2 border-gray-300"
-            style={{
-              left: '-12px',
-              top: '-10px',
-              height: '20px'
-            }}
-          />
-        )}
-        {childNodes.length > 0 && (
-          <div 
-            className="absolute border-l-2 border-gray-300"
-            style={{
-              left: '-12px',
-              top: '20px',
-              height: isExpanded ? `${childNodes.length * 40}px` : '0',
-              transition: 'height 0.2s'
-            }}
-          />
-        )}
-        
-        <div className="flex-1 flex items-center">
+        {/* Node content */}
+        <div className="flex-1 flex items-center min-w-0">
           <button 
             onClick={() => setIsExpanded(!isExpanded)}
-            className="mr-2 w-4 h-4 flex items-center justify-center"
+            className="mr-2 flex-shrink-0"
           >
             {childNodes.length > 0 && (
               isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
             )}
           </button>
-          <span className="font-medium">{node.title}</span>
-          <span className="ml-2 text-sm text-gray-500">({node.type})</span>
+          <div className="flex-1 min-w-0">
+            <span className="font-medium truncate block">{node.title}</span>
+            <span className="text-sm text-gray-500 truncate block">({node.type})</span>
+          </div>
         </div>
         
-        <div className="flex items-center gap-2">
-         <span className="text-xs capitalize text-gray-600">{node.status}</span>
-         <button
+        <div className="flex items-center gap-1 ml-auto flex-shrink-0 mt-1 md:mt-0">
+          <span className="text-xs capitalize text-gray-600 px-2 py-1 rounded bg-white/50">{node.status}</span>
+          <button
             onClick={() => onEdit(node)}
             className="opacity-0 group-hover:opacity-100 p-1 hover:opacity-70 rounded transition-opacity duration-200"
-         >
+          >
             <Pencil className="w-4 h-4" />
-         </button>
-         <button
+          </button>
+          <button
             onClick={() => onAddChild(node.id, node.title)}
             className="opacity-0 group-hover:opacity-100 p-1 hover:opacity-70 rounded transition-opacity duration-200"
-         >
+          >
             <PlusCircle className="w-4 h-4" />
-         </button>
-         <button
+          </button>
+          <button
             onClick={() => onDelete(node)}
             className="opacity-0 group-hover:opacity-100 p-1 hover:opacity-70 rounded transition-opacity duration-200 text-red-500"
-         >
+          >
             <Trash2 className="w-4 h-4" />
-         </button>
-         </div>
+          </button>
+        </div>
       </div>
       
-      {childNodes.length > 0 && (
-  <div 
-    className={`
-      overflow-hidden transition-all duration-1500
-      ${isExpanded ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}
-    `}
-  >
-    {isExpanded && (
-      <div className="border-l-2 border-gray-200">
-        {childNodes.map(child => (
-          <TreeNode
-            key={child.id}
-            node={child}
-            allNodes={allNodes}
-            level={level + 1}
-            onToggle={onToggle}
-            onAddChild={onAddChild}
-            onNodeDrop={onNodeDrop}
-            onEdit={onEdit}
-            onDelete={onDelete}
-          />
-        ))}
-      </div>
-    )}
-  </div>
-)}
+      {isExpanded && childNodes.length > 0 && (
+        <div 
+          className={`
+            transition-all duration-300
+            ${isExpanded ? 'opacity-100' : 'opacity-0 h-0'}
+          `}
+        >
+          {isExpanded && (
+            <div className="border-l-2 border-gray-200">
+              {childNodes.map(child => (
+                <TreeNode
+                  key={child.id}
+                  node={child}
+                  allNodes={allNodes}
+                  level={level + 1}
+                  onToggle={onToggle}
+                  onAddChild={onAddChild}
+                  onNodeDrop={onNodeDrop}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -310,6 +295,19 @@ const GoalTreeNodeView: React.FC = () => {
     }
   });
 
+  // Load data from localStorage on mount
+  useEffect(() => {
+    const savedNodes = localStorage.getItem('goalTreeNodes');
+    if (savedNodes) {
+      setNodes(JSON.parse(savedNodes));
+    }
+  }, []);
+
+   // Save to localStorage whenever nodes change
+   useEffect(() => {
+    localStorage.setItem('goalTreeNodes', JSON.stringify(nodes));
+  }, [nodes]);
+
   const handleNodeDrop = (draggedId: string, targetId: string) => {
     setNodes(prev => {
       const newNodes = { ...prev };
@@ -339,7 +337,10 @@ const GoalTreeNodeView: React.FC = () => {
     });
   };
 
-  const handleAddNode = (nodeData: Omit<NodeItem, 'id' | 'children' | 'parentId'>) => {
+  const handleAddNode = (
+    nodeData: Omit<NodeItem, 'id' | 'children' | 'parentId'>, 
+    parentId?: string
+  ) => {
     if (editingNode) {
       // Update existing node
       setNodes(prev => ({
@@ -357,16 +358,16 @@ const GoalTreeNodeView: React.FC = () => {
         id: newId,
         ...nodeData,
         children: [],
-        parentId: selectedParent?.id || null
+        parentId: parentId || null
       };
 
       setNodes(prevNodes => {
         const updatedNodes = { ...prevNodes, [newId]: newNode };
         
-        if (selectedParent) {
-          updatedNodes[selectedParent.id] = {
-            ...updatedNodes[selectedParent.id],
-            children: [...updatedNodes[selectedParent.id].children, newId]
+        if (parentId) {
+          updatedNodes[parentId] = {
+            ...updatedNodes[parentId],
+            children: [...updatedNodes[parentId].children, newId]
           };
         }
         
@@ -449,7 +450,7 @@ const GoalTreeNodeView: React.FC = () => {
     <div className="p-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>🎯 Goal Time</CardTitle>
+          <CardTitle>🎯 Goal Time Money</CardTitle>
           <button 
             onClick={() => setShowAddForm(true)}
             title="⌘/Ctrl + A"
@@ -513,7 +514,6 @@ const GoalTreeNodeView: React.FC = () => {
             setEditingNode(null);
           }}
           onAdd={handleAddNode}
-          parentId={selectedParent?.id}
           parentTitle={selectedParent?.title}
           editNode={editingNode}
         />

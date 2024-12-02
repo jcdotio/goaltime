@@ -14,7 +14,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Goaltime:May all the dreams come true",
+  title: "GoalTimeMoney",
   description: "May all the dreams come true",
   icons: {
     icon: [
