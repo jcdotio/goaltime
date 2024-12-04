@@ -1,6 +1,6 @@
 "use client"
 
-import { Home as HomeIcon, Settings, HelpCircle, X, LogInIcon } from 'lucide-react';
+import { X, LogInIcon } from 'lucide-react';
 import { useState, useCallback } from 'react';
 import { useAuth, SignIn } from "@clerk/nextjs";
 

@@ -1,15 +1,29 @@
-import { clerkMiddlewareMiddleware } from "@clerk/nextjs/server";
- 
-export default clerkMiddleware({
-  publicRoutes: ["/", "/sign-in", "/sign-up"],
-  afterAuth(auth, req, evt) {
-    // Handle auth state
-  }
-});
- 
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+
+const isPublicRoute = createRouteMatcher(["/", "/sign-in", "/sign-up"])
+const isDashboardRoute = createRouteMatcher(['/dashboard(.*)'])
+const isAdminRoute = createRouteMatcher(['/admin(.*)'])
+
+export default clerkMiddleware(async (auth, req) => {
+  // Allow public access to specified routes
+  if (isPublicRoute(req)) return
+
+  // Restrict admin route to users with specific role
+  if (isAdminRoute(req)) await auth.protect({ role: 'org:admin' })
+
+  // Restrict dashboard routes to signed in users
+  if (isDashboardRoute(req)) await auth.protect()
+
+  // For all other routes, ensure the user is authenticated
+  await auth.protect()
+})
+
 export const config = {
   matcher: [
-    '/((?!.*\\..*|_next).*)', // Don't run middleware on static files
-    '/', // Run middleware on index page
-    '/(api|trpc)(.*)'], // Run middleware on API routes
-};
+    // Skip Next.js internals and all static files, unless found in search params
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes
+    '/(api|trpc)(.*)',
+  ],
+}
+
