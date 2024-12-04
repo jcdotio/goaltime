@@ -1,8 +1,10 @@
-import { clerkMiddleware } from '@clerk/nextjs/server';
+import { clerkMiddlewareMiddleware } from "@clerk/nextjs/server";
  
 export default clerkMiddleware({
-  // Public routes that don't require authentication 
-  publicRoutes: ["/"]
+  publicRoutes: ["/", "/sign-in", "/sign-up"],
+  afterAuth(auth, req, evt) {
+    // Handle auth state
+  }
 });
  
 export const config = {

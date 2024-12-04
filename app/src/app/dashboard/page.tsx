@@ -2,23 +2,28 @@
 
 import { UserButton, useAuth } from "@clerk/nextjs";
 import GoalTreeNodeView from "@/components/goaltree/GoalTreeNodeView";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function Dashboard() {
   const { userId, isLoaded } = useAuth();
+  const router = useRouter();
   
-  if (!isLoaded) {
-    return null;
-  }
+  useEffect(() => {
+    if (isLoaded && !userId) {
+      router.push('/');
+    }
+  }, [isLoaded, userId, router]);
 
-  if (!userId) {
-    redirect("/");
+  if (!isLoaded || !userId) {
+    return null;
   }
 
   return (
     <div>
       <header className="flex justify-between p-4">
         <h1>Dashboard</h1>
-        <UserButton afterSignOutUrl="/"/>
+        <UserButton afterSignOutUrl="/" />
       </header>
       <GoalTreeNodeView />
     </div>

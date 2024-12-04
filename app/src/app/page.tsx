@@ -1,36 +1,29 @@
 "use client"
 
-import GoalTreeNodeView from '@/components/goaltree/GoalTreeNodeView';
 import { Home as HomeIcon, Settings, HelpCircle, X, LogInIcon } from 'lucide-react';
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState, useCallback } from 'react';
 import { useAuth, SignIn } from "@clerk/nextjs";
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { redirect } from "next/navigation";
-
 
 export default function HomePage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
   const { userId, isLoaded } = useAuth();
-  const router = useRouter();
 
-  if (!isLoaded) {
-    return (
-      null
-    );
-  }
-
-  if (userId) {
-    redirect("/dashboard");
-  }
-
-  const handleLoginClick = (e: React.MouseEvent) => {
+  // Use a callback for login click
+  const handleLoginClick = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setShowSignIn(true);
-    setIsMobileMenuOpen(false); // Close mobile menu if open
-  };
+    setIsMobileMenuOpen(false);
+  }, []);
+
+  // Simple loading state
+  if (!isLoaded) return null;
+
+  // Client-side navigation
+  if (userId) {
+    window.location.href = '/dashboard';
+    return null;
+  }
 
   return (
     <div className="flex flex-col h-screen">
@@ -90,16 +83,25 @@ export default function HomePage() {
 
       <main className="flex-1 container mx-auto p-4">
         Welcome to GTM     
-        <iframe width="560" height="315" src="https://www.youtube.com/embed/XD7cPr7TREE?si=R1-1zj5aM4k8WSIC" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+        <iframe 
+          width="560" 
+          height="315" 
+          src="https://www.youtube.com/embed/XD7cPr7TREE?si=R1-1zj5aM4k8WSIC" 
+          title="YouTube video player" 
+          frameBorder="0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+          referrerPolicy="strict-origin-when-cross-origin" 
+          allowFullScreen
+        />
       </main>
 
       {/* Sign In Modal */}
       {showSignIn && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="relative bg-white rounded-lg p-4 max-w-md w-full">
+          <div className="relative bg-transparent rounded-lg p-4 max-w-md w-full">
             <button
               onClick={() => setShowSignIn(false)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              className="absolute top-2 right-2 text-white hover:text-gray-200 z-50"
             >
               ×
             </button>
