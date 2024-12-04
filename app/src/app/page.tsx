@@ -90,16 +90,7 @@ export default function HomePage() {
 
       <main className="flex-1 container mx-auto p-4">
         Welcome to GTM     
-        <iframe 
-          width="560" 
-          height="315" 
-          src="https://www.youtube.com/embed/gPo7hksg8z4?si=ceagdhJJqJPEsOVV" 
-          title="YouTube video player" 
-          frameBorder="0" 
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-          referrerPolicy="strict-origin-when-cross-origin" 
-          allowFullScreen
-        />
+        <iframe width="560" height="315" src="https://www.youtube.com/embed/XD7cPr7TREE?si=R1-1zj5aM4k8WSIC" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
       </main>
 
       {/* Sign In Modal */}
