@@ -123,6 +123,8 @@ interface TreeNodeProps {
   onNodeDrop: (draggedId: string, targetId: string, dropPosition: 'before' | 'after' | 'inside') => void;
   onEdit: (node: NodeItem) => void;
   onDelete: (node: NodeItem) => void;
+  expandedNodes: Set<string>;
+  onToggleExpand: (nodeId: string) => void;
 }
 
 const TreeNode: React.FC<TreeNodeProps> = ({
@@ -134,23 +136,23 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   onNodeDrop,
   onEdit,
   onDelete,
+  expandedNodes,
+  onToggleExpand,
 }) => {
+  
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleExpand(node.id);
+  };
+
+  const isExpanded = expandedNodes.has(node.id);
   const childNodes = node.children.map(id => allNodes[id]).filter(Boolean);
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [isOver, setIsOver] = useState(false);
+  const [dropTarget, setDropTarget] = useState<'before' | 'after' | 'inside' | null>(null);
 
   const handleDragStart = (e: React.DragEvent) => {
     e.stopPropagation();
     e.dataTransfer.setData('text/plain', node.id);
   };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsOver(false);
-  };
-
-  const [dropTarget, setDropTarget] = useState<'before' | 'after' | 'inside' | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -203,7 +205,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
         {/* Node content */}
         <div className="flex-1 flex items-center min-w-0">
           <button 
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={handleToggle}
             className="mr-2 flex-shrink-0"
           >
             {childNodes.length > 0 && (
@@ -261,6 +263,8 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                   onNodeDrop={onNodeDrop}
                   onEdit={onEdit}
                   onDelete={onDelete}
+                  expandedNodes={expandedNodes}
+                  onToggleExpand={onToggleExpand}
                 />
               ))}
             </div>
@@ -275,8 +279,9 @@ const GoalTreeNodeView: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedParent, setSelectedParent] = useState<{ id: string; title: string } | null>(null);
   const [editingNode, setEditingNode] = useState<NodeItem | null>(null);
-  const [rootOrder, setRootOrder] = useState<string[]>([]);
-  const [nodes, setNodes] = useState<Record<string, NodeItem>>({
+  const [nodes, setNodes] = useState<Record<string, NodeItem>>(() => {
+    const savedNodes = localStorage.getItem('goalTreeNodes');
+    return savedNodes ? JSON.parse(savedNodes) : {
     '1': {
       id: '1',
       type: 'goal',
@@ -309,77 +314,143 @@ const GoalTreeNodeView: React.FC = () => {
       children: [],
       parentId: '3'
     }
+  };
   });
 
-  // Load data from localStorage on mount
-  useEffect(() => {
-    const savedNodes = localStorage.getItem('goalTreeNodes');
-    if (savedNodes) {
-      const loadedNodes = JSON.parse(savedNodes);
-      setNodes(loadedNodes);
-      // Initialize root order from loaded nodes
-      const initialRootOrder = Object.values(loadedNodes)
+
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('goalTreeExpanded');
+    return saved ? new Set(JSON.parse(saved)) : new Set<string>();
+  });
+
+  const handleToggleExpand = (nodeId: string) => {
+    setExpandedNodes(prev => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) {
+        next.delete(nodeId);
+      } else {
+        next.add(nodeId);
+      }
+      return next;
+    });
+  };
+
+
+  // Initialize rootOrder with proper defaults
+  const [rootOrder, setRootOrder] = useState<string[]>(() => {
+    const savedRootOrder = localStorage.getItem('goalTreeRootOrder');
+    if (savedRootOrder) {
+      return JSON.parse(savedRootOrder);
+    }
+    // Get initial root nodes from nodes state
+    return Object.values(nodes)
+      .filter(node => !node.parentId)
+      .map(node => node.id);
+  });
+
+// Load data
+useEffect(() => {
+  const savedNodes = localStorage.getItem('goalTreeNodes');
+  const savedRootOrder = localStorage.getItem('goalTreeRootOrder');
+  
+  if (savedNodes) {
+    const loadedNodes = JSON.parse(savedNodes) as Record<string, NodeItem>;
+    setNodes(loadedNodes);
+    
+    if (savedRootOrder) {
+      setRootOrder(JSON.parse(savedRootOrder));
+    } else {
+      const initialRootOrder = Object.values(loadedNodes as Record<string, NodeItem>)
         .filter(node => !node.parentId)
         .map(node => node.id);
       setRootOrder(initialRootOrder);
     }
-  }, []);
+  }
+}, []);
 
-   // Save to localStorage whenever nodes change
-   useEffect(() => {
-    localStorage.setItem('goalTreeNodes', JSON.stringify(nodes));
-  }, [nodes]);
+// Save data
+useEffect(() => {
+  localStorage.setItem('goalTreeNodes', JSON.stringify(nodes));
+  localStorage.setItem('goalTreeRootOrder', JSON.stringify(rootOrder));
+  localStorage.setItem('goalTreeExpanded', JSON.stringify([...expandedNodes]));
+}, [nodes, rootOrder, expandedNodes]);
 
-  const handleNodeDrop = (draggedId: string, targetId: string, dropPosition: 'before' | 'after' | 'inside') => {
-    setNodes(prev => {
-      const newNodes = { ...prev };
-      const draggedNode = newNodes[draggedId];
-      const targetNode = newNodes[targetId];
-  
-      // Remove from old parent or root order
-      if (draggedNode.parentId) {
-        const oldParent = newNodes[draggedNode.parentId];
-        oldParent.children = oldParent.children.filter(id => id !== draggedId);
-      } else {
-        // Remove from rootOrder if it was a root node
-        setRootOrder(current => current.filter(id => id !== draggedId));
-      }
-  
-      // Handle based on drop position
-      if (dropPosition === 'inside') {
-        // Make it a child of target
-        draggedNode.parentId = targetId;
-        targetNode.children.push(draggedId);
-      } else {
-        if (targetNode.parentId === null) {
-          // Dropping near a root node
-          draggedNode.parentId = null;
-          setRootOrder(current => {
-            const newOrder = current.filter(id => id !== draggedId);
-            const targetIndex = newOrder.indexOf(targetId);
-            newOrder.splice(dropPosition === 'before' ? targetIndex : targetIndex + 1, 0, draggedId);
-            return newOrder;
-          });
-        } else {
-          // Dropping as sibling of a child node
-          const parentNode = newNodes[targetNode.parentId];
-          const targetIndex = parentNode.children.indexOf(targetId);
-          draggedNode.parentId = targetNode.parentId;
-          parentNode.children.splice(
-            dropPosition === 'before' ? targetIndex : targetIndex + 1,
-            0,
-            draggedId
-          );
-        }
-      }
-  
-      return newNodes;
-    });
+const handleNodeDrop = (draggedId: string, targetId: string, dropPosition: 'before' | 'after' | 'inside') => {
+  // Validation checks
+  const isDescendant = (parentId: string, childId: string): boolean => {
+    const parent = nodes[parentId];
+    if (!parent) return false;
+    if (parent.children.includes(childId)) return true;
+    return parent.children.some(id => isDescendant(id, childId));
   };
 
-  const handleAddNode = (nodeData: Omit<NodeItem, 'id' | 'children' | 'parentId'>) => {
+  if (draggedId === targetId || isDescendant(draggedId, targetId)) {
+    return;
+  }
+
+  setNodes(prev => {
+    const newNodes = { ...prev };
+    const draggedNode = { ...newNodes[draggedId] };
+    const targetNode = { ...newNodes[targetId] };
+    
+    // Update the nodes with copies to prevent reference issues
+    newNodes[draggedId] = draggedNode;
+    newNodes[targetId] = targetNode;
+
+    // Remove from old parent
+    if (draggedNode.parentId) {
+      const oldParent = { ...newNodes[draggedNode.parentId] };
+      oldParent.children = oldParent.children.filter(id => id !== draggedId);
+      newNodes[draggedNode.parentId] = oldParent;
+    }
+
+    if (dropPosition === 'inside') {
+      // Handle dropping inside target
+      if (!draggedNode.parentId) {
+        setRootOrder(prev => prev.filter(id => id !== draggedId));
+      }
+      draggedNode.parentId = targetId;
+      targetNode.children = Array.from(new Set([...targetNode.children, draggedId]));
+    } else {
+      // Handle dropping before/after
+      const newParentId = targetNode.parentId;
+      draggedNode.parentId = newParentId;
+
+      if (!newParentId) {
+        // Root level drop
+        setRootOrder(prev => {
+          const filteredOrder = prev.filter(id => id !== draggedId);
+          const targetIndex = filteredOrder.indexOf(targetId);
+          const insertIndex = dropPosition === 'after' ? targetIndex + 1 : targetIndex;
+          return [
+            ...filteredOrder.slice(0, insertIndex),
+            draggedId,
+            ...filteredOrder.slice(insertIndex)
+          ];
+        });
+      } else {
+        // Non-root level drop
+        const parent = { ...newNodes[newParentId] };
+        const targetIndex = parent.children.indexOf(targetId);
+        const insertIndex = dropPosition === 'after' ? targetIndex + 1 : targetIndex;
+        
+        // Remove draggedId if it exists and insert at new position
+        parent.children = Array.from(new Set([
+          ...parent.children.slice(0, insertIndex),
+          draggedId,
+          ...parent.children.slice(insertIndex)
+        ])).filter(id => id !== draggedId || parent.children.indexOf(id) === insertIndex);
+        
+        newNodes[newParentId] = parent;
+      }
+    }
+
+    return newNodes;
+  });
+};
+
+    const handleAddNode = (nodeData: Omit<NodeItem, 'id' | 'children' | 'parentId'>) => {
     if (editingNode) {
-      // Update existing node
       setNodes(prev => ({
         ...prev,
         [editingNode.id]: {
@@ -388,36 +459,33 @@ const GoalTreeNodeView: React.FC = () => {
         }
       }));
       setEditingNode(null);
-    } else {
-      // Add new node
-      const newId = String(Math.max(0, ...Object.keys(nodes).map(Number)) + 1); // Better ID generation
-      const parentId = selectedParent?.id || null;
-      
-      const newNode: NodeItem = {
-        id: newId,
-        ...nodeData,
-        children: [],
-        parentId
-      };
-  
-      setNodes(prevNodes => {
-        const updatedNodes = { ...prevNodes, [newId]: newNode };
-        
-        if (parentId) {
-          // Add to parent's children array
-          updatedNodes[parentId] = {
-            ...updatedNodes[parentId],
-            children: [...updatedNodes[parentId].children, newId]
-          };
-        } else {
-          // Only update rootOrder for root nodes
-          setRootOrder(currentRootOrder => 
-            currentRootOrder.includes(newId) ? currentRootOrder : [...currentRootOrder, newId]
-          );
+      return;
+    }
+
+    const newId = String(Math.max(0, ...Object.keys(nodes).map(Number)) + 1);
+    const parentId = selectedParent?.id || null;
+    
+    const newNode: NodeItem = {
+      id: newId,
+      ...nodeData,
+      children: [],
+      parentId
+    };
+
+    setNodes(prev => ({
+      ...prev,
+      [newId]: newNode,
+      ...(parentId && {
+        [parentId]: {
+          ...prev[parentId],
+          children: [...prev[parentId].children, newId]
         }
-        
-        return updatedNodes;
-      });
+      })
+    }));
+
+    // Update rootOrder only for root level nodes
+    if (!parentId) {
+      setRootOrder(prev => [...prev, newId]);
     }
   };
 
@@ -425,8 +493,6 @@ const GoalTreeNodeView: React.FC = () => {
     setEditingNode(node);
     setShowAddForm(true);
   };
-
-  const rootNodes = Object.values(nodes).filter(node => !node.parentId);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [nodeToDelete, setNodeToDelete] = useState<NodeItem | null>(null);
@@ -448,10 +514,10 @@ const GoalTreeNodeView: React.FC = () => {
 
   const confirmDelete = () => {
     if (!nodeToDelete) return;
-
+  
     const descendantIds = getAllDescendantIds(nodeToDelete.id);
     const idsToDelete = [nodeToDelete.id, ...descendantIds];
-
+  
     setNodes(prev => {
       const newNodes = { ...prev };
       
@@ -463,19 +529,23 @@ const GoalTreeNodeView: React.FC = () => {
             id => id !== nodeToDelete.id
           )
         };
+      } else {
+        // If it's a root node, update rootOrder
+        setRootOrder(current => current.filter(id => !idsToDelete.includes(id)));
       }
-
+  
       // Delete all descendants and the node itself
       idsToDelete.forEach(id => {
         delete newNodes[id];
       });
-
+  
       return newNodes;
     });
-
+  
     setShowDeleteConfirm(false);
     setNodeToDelete(null);
   };
+
   useEffect(() => {
    const handleKeyPress = (e: KeyboardEvent) => {
      // Check for 'a' key press with Command (Mac) or Control (Windows)
@@ -520,6 +590,8 @@ const GoalTreeNodeView: React.FC = () => {
            onNodeDrop={handleNodeDrop}
            onEdit={handleEdit}
            onDelete={handleDelete}
+           expandedNodes={expandedNodes} 
+           onToggleExpand={handleToggleExpand} 
          />
        )) : Object.values(nodes).filter(node => !node.parentId).map(node => (
          <TreeNode
@@ -534,6 +606,8 @@ const GoalTreeNodeView: React.FC = () => {
            onNodeDrop={handleNodeDrop}
            onEdit={handleEdit}
            onDelete={handleDelete}
+           expandedNodes={expandedNodes}
+           onToggleExpand={handleToggleExpand}       
          />
        ))}
      </div>
