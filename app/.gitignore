@@ -8,6 +8,7 @@
 /build
 
 # misc
+backup.yaml
 .DS_Store
 .env*
 

@@ -120,9 +120,11 @@ interface TreeNodeProps {
   level?: number;
   onToggle: (id: string) => void;
   onAddChild: (parentId: string, parentTitle: string) => void;
-  onNodeDrop: (draggedId: string, targetId: string) => void;
+  onNodeDrop: (draggedId: string, targetId: string, dropPosition: 'before' | 'after' | 'inside') => void;
   onEdit: (node: NodeItem) => void;
   onDelete: (node: NodeItem) => void;
+  expandedNodes: Set<string>;
+  onToggleExpand: (nodeId: string) => void;
 }
 
 const TreeNode: React.FC<TreeNodeProps> = ({
@@ -134,10 +136,18 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   onNodeDrop,
   onEdit,
   onDelete,
+  expandedNodes,
+  onToggleExpand,
 }) => {
+  
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleExpand(node.id);
+  };
+
+  const isExpanded = expandedNodes.has(node.id);
   const childNodes = node.children.map(id => allNodes[id]).filter(Boolean);
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [isOver, setIsOver] = useState(false);
+  const [dropTarget, setDropTarget] = useState<'before' | 'after' | 'inside' | null>(null);
 
   const handleDragStart = (e: React.DragEvent) => {
     e.stopPropagation();
@@ -146,32 +156,37 @@ const TreeNode: React.FC<TreeNodeProps> = ({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-    setIsOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsOver(false);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    
+    if (y < rect.height * 0.25) {
+      setDropTarget('before');
+    } else if (y > rect.height * 0.75) {
+      setDropTarget('after');
+    } else {
+      setDropTarget('inside');
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsOver(false);
     const draggedId = e.dataTransfer.getData('text/plain');
-    if (draggedId !== node.id) {
-      onNodeDrop(draggedId, node.id);
-    }
+    onNodeDrop(draggedId, node.id, dropTarget || 'inside');
+    setDropTarget(null);
   };
+
 
   return (
     <div className="relative">
+      {dropTarget === 'before' && (
+        <div className="absolute w-full h-1 bg-blue-500 -top-1 z-10" />
+      )}
+  
       <div 
         className={`
           flex items-start flex-wrap md:flex-nowrap p-2 my-1 rounded-lg hover:bg-opacity-80 cursor-move group
-          ${isOver ? 'border-2 border-blue-500' : ''}
+          ${dropTarget === 'inside' ? 'border-2 border-blue-500' : ''}
           ${node.status === 'active' ? 'bg-green-100' : 
             node.status === 'completed' ? 'bg-blue-100' : 
             node.status === 'blocked' ? 'bg-red-100' : 
@@ -184,13 +199,13 @@ const TreeNode: React.FC<TreeNodeProps> = ({
         draggable
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
+        onDragLeave={() => setDropTarget(null)}
         onDrop={handleDrop}
       >
         {/* Node content */}
         <div className="flex-1 flex items-center min-w-0">
           <button 
-            onClick={() => setIsExpanded(!isExpanded)}
+            onClick={handleToggle}
             className="mr-2 flex-shrink-0"
           >
             {childNodes.length > 0 && (
@@ -204,7 +219,9 @@ const TreeNode: React.FC<TreeNodeProps> = ({
         </div>
         
         <div className="flex items-center gap-1 ml-auto flex-shrink-0 mt-1 md:mt-0">
-          <span className="text-xs capitalize text-gray-600 px-2 py-1 rounded bg-white/50">{node.status}</span>
+          <span className="text-xs capitalize text-gray-600 px-2 py-1 rounded bg-white/50">
+            {node.status}
+          </span>
           <button
             onClick={() => onEdit(node)}
             className="opacity-0 group-hover:opacity-100 p-1 hover:opacity-70 rounded transition-opacity duration-200"
@@ -225,7 +242,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({
           </button>
         </div>
       </div>
-      
+  
       {isExpanded && childNodes.length > 0 && (
         <div 
           className={`
@@ -246,6 +263,8 @@ const TreeNode: React.FC<TreeNodeProps> = ({
                   onNodeDrop={onNodeDrop}
                   onEdit={onEdit}
                   onDelete={onDelete}
+                  expandedNodes={expandedNodes}
+                  onToggleExpand={onToggleExpand}
                 />
               ))}
             </div>
@@ -260,7 +279,9 @@ const GoalTreeNodeView: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedParent, setSelectedParent] = useState<{ id: string; title: string } | null>(null);
   const [editingNode, setEditingNode] = useState<NodeItem | null>(null);
-  const [nodes, setNodes] = useState<Record<string, NodeItem>>({
+  const [nodes, setNodes] = useState<Record<string, NodeItem>>(() => {
+    const savedNodes = localStorage.getItem('goalTreeNodes');
+    return savedNodes ? JSON.parse(savedNodes) : {
     '1': {
       id: '1',
       type: 'goal',
@@ -293,56 +314,143 @@ const GoalTreeNodeView: React.FC = () => {
       children: [],
       parentId: '3'
     }
+  };
   });
 
-  // Load data from localStorage on mount
-  useEffect(() => {
-    const savedNodes = localStorage.getItem('goalTreeNodes');
-    if (savedNodes) {
-      setNodes(JSON.parse(savedNodes));
-    }
-  }, []);
 
-   // Save to localStorage whenever nodes change
-   useEffect(() => {
-    localStorage.setItem('goalTreeNodes', JSON.stringify(nodes));
-  }, [nodes]);
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('goalTreeExpanded');
+    return saved ? new Set(JSON.parse(saved)) : new Set<string>();
+  });
 
-  const handleNodeDrop = (draggedId: string, targetId: string) => {
-    setNodes(prev => {
-      const newNodes = { ...prev };
-      
-      // Remove from old parent's children
-      const oldParentId = newNodes[draggedId].parentId;
-      if (oldParentId) {
-        newNodes[oldParentId] = {
-          ...newNodes[oldParentId],
-          children: newNodes[oldParentId].children.filter(id => id !== draggedId)
-        };
+  const handleToggleExpand = (nodeId: string) => {
+    setExpandedNodes(prev => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) {
+        next.delete(nodeId);
+      } else {
+        next.add(nodeId);
       }
-
-      // Add to new parent's children
-      newNodes[targetId] = {
-        ...newNodes[targetId],
-        children: [...newNodes[targetId].children, draggedId]
-      };
-
-      // Update dragged node's parentId
-      newNodes[draggedId] = {
-        ...newNodes[draggedId],
-        parentId: targetId
-      };
-
-      return newNodes;
+      return next;
     });
   };
 
-  const handleAddNode = (
-    nodeData: Omit<NodeItem, 'id' | 'children' | 'parentId'>, 
-    parentId?: string
-  ) => {
+
+  // Initialize rootOrder with proper defaults
+  const [rootOrder, setRootOrder] = useState<string[]>(() => {
+    const savedRootOrder = localStorage.getItem('goalTreeRootOrder');
+    if (savedRootOrder) {
+      return JSON.parse(savedRootOrder);
+    }
+    // Get initial root nodes from nodes state
+    return Object.values(nodes)
+      .filter(node => !node.parentId)
+      .map(node => node.id);
+  });
+
+// Load data
+useEffect(() => {
+  const savedNodes = localStorage.getItem('goalTreeNodes');
+  const savedRootOrder = localStorage.getItem('goalTreeRootOrder');
+  
+  if (savedNodes) {
+    const loadedNodes = JSON.parse(savedNodes) as Record<string, NodeItem>;
+    setNodes(loadedNodes);
+    
+    if (savedRootOrder) {
+      setRootOrder(JSON.parse(savedRootOrder));
+    } else {
+      const initialRootOrder = Object.values(loadedNodes as Record<string, NodeItem>)
+        .filter(node => !node.parentId)
+        .map(node => node.id);
+      setRootOrder(initialRootOrder);
+    }
+  }
+}, []);
+
+// Save data
+useEffect(() => {
+  localStorage.setItem('goalTreeNodes', JSON.stringify(nodes));
+  localStorage.setItem('goalTreeRootOrder', JSON.stringify(rootOrder));
+  localStorage.setItem('goalTreeExpanded', JSON.stringify([...expandedNodes]));
+}, [nodes, rootOrder, expandedNodes]);
+
+const handleNodeDrop = (draggedId: string, targetId: string, dropPosition: 'before' | 'after' | 'inside') => {
+  // Validation checks
+  const isDescendant = (parentId: string, childId: string): boolean => {
+    const parent = nodes[parentId];
+    if (!parent) return false;
+    if (parent.children.includes(childId)) return true;
+    return parent.children.some(id => isDescendant(id, childId));
+  };
+
+  if (draggedId === targetId || isDescendant(draggedId, targetId)) {
+    return;
+  }
+
+  setNodes(prev => {
+    const newNodes = { ...prev };
+    const draggedNode = { ...newNodes[draggedId] };
+    const targetNode = { ...newNodes[targetId] };
+    
+    // Update the nodes with copies to prevent reference issues
+    newNodes[draggedId] = draggedNode;
+    newNodes[targetId] = targetNode;
+
+    // Remove from old parent
+    if (draggedNode.parentId) {
+      const oldParent = { ...newNodes[draggedNode.parentId] };
+      oldParent.children = oldParent.children.filter(id => id !== draggedId);
+      newNodes[draggedNode.parentId] = oldParent;
+    }
+
+    if (dropPosition === 'inside') {
+      // Handle dropping inside target
+      if (!draggedNode.parentId) {
+        setRootOrder(prev => prev.filter(id => id !== draggedId));
+      }
+      draggedNode.parentId = targetId;
+      targetNode.children = Array.from(new Set([...targetNode.children, draggedId]));
+    } else {
+      // Handle dropping before/after
+      const newParentId = targetNode.parentId;
+      draggedNode.parentId = newParentId;
+
+      if (!newParentId) {
+        // Root level drop
+        setRootOrder(prev => {
+          const filteredOrder = prev.filter(id => id !== draggedId);
+          const targetIndex = filteredOrder.indexOf(targetId);
+          const insertIndex = dropPosition === 'after' ? targetIndex + 1 : targetIndex;
+          return [
+            ...filteredOrder.slice(0, insertIndex),
+            draggedId,
+            ...filteredOrder.slice(insertIndex)
+          ];
+        });
+      } else {
+        // Non-root level drop
+        const parent = { ...newNodes[newParentId] };
+        const targetIndex = parent.children.indexOf(targetId);
+        const insertIndex = dropPosition === 'after' ? targetIndex + 1 : targetIndex;
+        
+        // Remove draggedId if it exists and insert at new position
+        parent.children = Array.from(new Set([
+          ...parent.children.slice(0, insertIndex),
+          draggedId,
+          ...parent.children.slice(insertIndex)
+        ])).filter(id => id !== draggedId || parent.children.indexOf(id) === insertIndex);
+        
+        newNodes[newParentId] = parent;
+      }
+    }
+
+    return newNodes;
+  });
+};
+
+    const handleAddNode = (nodeData: Omit<NodeItem, 'id' | 'children' | 'parentId'>) => {
     if (editingNode) {
-      // Update existing node
       setNodes(prev => ({
         ...prev,
         [editingNode.id]: {
@@ -351,28 +459,33 @@ const GoalTreeNodeView: React.FC = () => {
         }
       }));
       setEditingNode(null);
-    } else {
-      // Add new node
-      const newId = String(Object.keys(nodes).length + 1);
-      const newNode: NodeItem = {
-        id: newId,
-        ...nodeData,
-        children: [],
-        parentId: parentId || null
-      };
+      return;
+    }
 
-      setNodes(prevNodes => {
-        const updatedNodes = { ...prevNodes, [newId]: newNode };
-        
-        if (parentId) {
-          updatedNodes[parentId] = {
-            ...updatedNodes[parentId],
-            children: [...updatedNodes[parentId].children, newId]
-          };
+    const newId = String(Math.max(0, ...Object.keys(nodes).map(Number)) + 1);
+    const parentId = selectedParent?.id || null;
+    
+    const newNode: NodeItem = {
+      id: newId,
+      ...nodeData,
+      children: [],
+      parentId
+    };
+
+    setNodes(prev => ({
+      ...prev,
+      [newId]: newNode,
+      ...(parentId && {
+        [parentId]: {
+          ...prev[parentId],
+          children: [...prev[parentId].children, newId]
         }
-        
-        return updatedNodes;
-      });
+      })
+    }));
+
+    // Update rootOrder only for root level nodes
+    if (!parentId) {
+      setRootOrder(prev => [...prev, newId]);
     }
   };
 
@@ -380,8 +493,6 @@ const GoalTreeNodeView: React.FC = () => {
     setEditingNode(node);
     setShowAddForm(true);
   };
-
-  const rootNodes = Object.values(nodes).filter(node => !node.parentId);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [nodeToDelete, setNodeToDelete] = useState<NodeItem | null>(null);
@@ -403,10 +514,10 @@ const GoalTreeNodeView: React.FC = () => {
 
   const confirmDelete = () => {
     if (!nodeToDelete) return;
-
+  
     const descendantIds = getAllDescendantIds(nodeToDelete.id);
     const idsToDelete = [nodeToDelete.id, ...descendantIds];
-
+  
     setNodes(prev => {
       const newNodes = { ...prev };
       
@@ -418,19 +529,23 @@ const GoalTreeNodeView: React.FC = () => {
             id => id !== nodeToDelete.id
           )
         };
+      } else {
+        // If it's a root node, update rootOrder
+        setRootOrder(current => current.filter(id => !idsToDelete.includes(id)));
       }
-
+  
       // Delete all descendants and the node itself
       idsToDelete.forEach(id => {
         delete newNodes[id];
       });
-
+  
       return newNodes;
     });
-
+  
     setShowDeleteConfirm(false);
     setNodeToDelete(null);
   };
+
   useEffect(() => {
    const handleKeyPress = (e: KeyboardEvent) => {
      // Check for 'a' key press with Command (Mac) or Control (Windows)
@@ -446,80 +561,98 @@ const GoalTreeNodeView: React.FC = () => {
    return () => window.removeEventListener('keydown', handleKeyPress);
  }, []);
 
-  return (
-    <div className="p-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>🎯 Goal Time Money</CardTitle>
-          <button 
-            onClick={() => setShowAddForm(true)}
-            title="⌘/Ctrl + A"
-            className="flex items-center gap-2 px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-            >
-            <PlusCircle className="w-4 h-4" />
-            Add Anything
-          </button>
-        </CardHeader>
-        <CardContent>
-          <div className="mt-4">
-            {rootNodes.map(node => (
-              <TreeNode
-                key={node.id}
-                node={node}
-                allNodes={nodes}
-                onToggle={(id) => console.log('toggled:', id)}
-                onAddChild={(parentId, parentTitle) => {
-                  setSelectedParent({ id: parentId, title: parentTitle });
-                  setShowAddForm(true);
-                }}
-                onNodeDrop={handleNodeDrop}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+ return (
+ <div className="p-4">
+ <Card>
+   <CardHeader className="flex flex-row items-center justify-between">
+     <CardTitle>🎯 GTM</CardTitle>
+     <button 
+       onClick={() => setShowAddForm(true)}
+       title="⌘/Ctrl + A"
+       className="flex items-center gap-2 px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+     >
+       <PlusCircle className="w-4 h-4" />
+       Add Anything
+     </button>
+   </CardHeader>
+   <CardContent>
+     <div className="mt-4">
+       {rootOrder.length > 0 ? rootOrder.map(nodeId => (
+         <TreeNode
+           key={nodeId}
+           node={nodes[nodeId]}
+           allNodes={nodes}
+           onToggle={(id) => console.log('toggled:', id)}
+           onAddChild={(parentId, parentTitle) => {
+             setSelectedParent({ id: parentId, title: parentTitle });
+             setShowAddForm(true);
+           }}
+           onNodeDrop={handleNodeDrop}
+           onEdit={handleEdit}
+           onDelete={handleDelete}
+           expandedNodes={expandedNodes} 
+           onToggleExpand={handleToggleExpand} 
+         />
+       )) : Object.values(nodes).filter(node => !node.parentId).map(node => (
+         <TreeNode
+           key={node.id}
+           node={node}
+           allNodes={nodes}
+           onToggle={(id) => console.log('toggled:', id)}
+           onAddChild={(parentId, parentTitle) => {
+             setSelectedParent({ id: parentId, title: parentTitle });
+             setShowAddForm(true);
+           }}
+           onNodeDrop={handleNodeDrop}
+           onEdit={handleEdit}
+           onDelete={handleDelete}
+           expandedNodes={expandedNodes}
+           onToggleExpand={handleToggleExpand}       
+         />
+       ))}
+     </div>
+   </CardContent>
+ </Card>
 
-      {showDeleteConfirm && nodeToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg w-96">
-            <h3 className="text-lg font-medium mb-4">Confirm Delete</h3>
-            <p className="mb-4">
-              Are you sure you want to delete &quot;{nodeToDelete.title}&quot; and all its children?
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 border rounded hover:bg-gray-100"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+ {showDeleteConfirm && nodeToDelete && (
+   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+     <div className="bg-white p-6 rounded-lg w-96">
+       <h3 className="text-lg font-medium mb-4">Confirm Delete</h3>
+       <p className="mb-4">
+         Are you sure you want to delete &quot;{nodeToDelete.title}&quot; and all its children?
+       </p>
+       <div className="flex justify-end gap-2">
+         <button
+           onClick={() => setShowDeleteConfirm(false)}
+           className="px-4 py-2 border rounded hover:bg-gray-100"
+         >
+           Cancel
+         </button>
+         <button
+           onClick={confirmDelete}
+           className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+         >
+           Delete
+         </button>
+       </div>
+     </div>
+   </div>
+ )}
 
-      {showAddForm && (
-        <AddNodeForm
-          onClose={() => {
-            setShowAddForm(false);
-            setSelectedParent(null);
-            setEditingNode(null);
-          }}
-          onAdd={handleAddNode}
-          parentTitle={selectedParent?.title}
-          editNode={editingNode}
-        />
-      )}
-    </div>
-  );
+ {showAddForm && (
+   <AddNodeForm
+     onClose={() => {
+       setShowAddForm(false);
+       setSelectedParent(null);
+       setEditingNode(null);
+     }}
+     onAdd={handleAddNode}
+     parentTitle={selectedParent?.title}
+     editNode={editingNode}
+   />
+ )}
+</div>
+);
 };
 
 export default GoalTreeNodeView;
