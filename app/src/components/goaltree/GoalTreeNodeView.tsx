@@ -493,6 +493,8 @@ const handleNodeDrop = (draggedId: string, targetId: string, dropPosition: 'befo
       }
       draggedNode.parentId = targetId;
       targetNode.children = Array.from(new Set([...targetNode.children, draggedId]));
+      setExpandedNodes(prev => new Set([...prev, targetId])); // expand target node
+
     } else {
       // Handle dropping before/after
       const newParentId = targetNode.parentId;
