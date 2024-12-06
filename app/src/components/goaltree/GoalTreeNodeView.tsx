@@ -125,6 +125,9 @@ interface TreeNodeProps {
   onDelete: (node: NodeItem) => void;
   expandedNodes: Set<string>;
   onToggleExpand: (nodeId: string) => void;
+  isSelectionMode: boolean;
+  isSelected: boolean;
+  onSelect: (nodeId: string) => void;
 }
 
 const TreeNode: React.FC<TreeNodeProps> = ({
@@ -138,10 +141,15 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   onDelete,
   expandedNodes,
   onToggleExpand,
+  isSelectionMode = false, 
+  isSelected = false,      
+  onSelect,
 }) => {
   
-  const handleToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleToggle = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     onToggleExpand(node.id);
   };
 
@@ -180,13 +188,15 @@ const TreeNode: React.FC<TreeNodeProps> = ({
   return (
     <div className="relative">
       {dropTarget === 'before' && (
-        <div className="absolute w-full h-1 bg-blue-500 -top-1 z-10" />
+        <div className="absolute w-full h-1 bg-purple-500 -top-1 z-10" />
       )}
   
       <div 
         className={`
-          flex items-start flex-wrap md:flex-nowrap p-2 my-1 rounded-lg hover:bg-opacity-80 cursor-move group
-          ${dropTarget === 'inside' ? 'border-2 border-blue-500' : ''}
+          flex items-start flex-wrap md:flex-nowrap p-2 my-1 rounded-lg 
+          hover:bg-opacity-80 ${isSelectionMode ? 'cursor-pointer' : 'cursor-move'} group
+          ${dropTarget === 'inside' ? 'border-2 border-purple-500' : ''}
+          ${isSelected ? 'ring-2 ring-purple-500' : ''}
           ${node.status === 'active' ? 'bg-green-100' : 
             node.status === 'completed' ? 'bg-blue-100' : 
             node.status === 'blocked' ? 'bg-red-100' : 
@@ -196,16 +206,28 @@ const TreeNode: React.FC<TreeNodeProps> = ({
         style={{
           marginLeft: `${level * 24}px`
         }}
-        draggable
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragLeave={() => setDropTarget(null)}
-        onDrop={handleDrop}
+        draggable={!isSelectionMode}
+        onDragStart={!isSelectionMode ? handleDragStart : undefined}
+        onDragOver={!isSelectionMode ? handleDragOver : undefined}
+        onDragLeave={() => !isSelectionMode && setDropTarget(null)}
+        onDrop={!isSelectionMode ? handleDrop : undefined}
+        onClick={isSelectionMode ? () => onSelect(node.id) : undefined}
+        onKeyDown={e => {
+          if (isSelectionMode && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onSelect(node.id);
+          }
+        }}
+        tabIndex={isSelectionMode ? 0 : undefined}
+        role={isSelectionMode ? 'checkbox' : undefined}
+        aria-checked={isSelectionMode ? isSelected : undefined}
       >
-        {/* Node content */}
         <div className="flex-1 flex items-center min-w-0">
           <button 
-            onClick={handleToggle}
+            onClick={e => {
+              e.stopPropagation();
+              handleToggle();
+            }}
             className="mr-2 flex-shrink-0"
           >
             {childNodes.length > 0 && (
@@ -222,53 +244,60 @@ const TreeNode: React.FC<TreeNodeProps> = ({
           <span className="text-xs capitalize text-gray-600 px-2 py-1 rounded bg-white/50">
             {node.status}
           </span>
-          <button
-            onClick={() => onEdit(node)}
-            className="opacity-0 group-hover:opacity-100 p-1 hover:opacity-70 rounded transition-opacity duration-200"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => onAddChild(node.id, node.title)}
-            className="opacity-0 group-hover:opacity-100 p-1 hover:opacity-70 rounded transition-opacity duration-200"
-          >
-            <PlusCircle className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => onDelete(node)}
-            className="opacity-0 group-hover:opacity-100 p-1 hover:opacity-70 rounded transition-opacity duration-200 text-red-500"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {!isSelectionMode && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(node);
+                }}
+                className="opacity-0 group-hover:opacity-100 p-1 hover:opacity-70 rounded transition-opacity duration-200"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddChild(node.id, node.title);
+                }}
+                className="opacity-0 group-hover:opacity-100 p-1 hover:opacity-70 rounded transition-opacity duration-200"
+              >
+                <PlusCircle className="w-4 h-4" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(node);
+                }}
+                className="opacity-0 group-hover:opacity-100 p-1 hover:opacity-70 rounded transition-opacity duration-200 text-red-500"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
+          )}
         </div>
       </div>
   
       {isExpanded && childNodes.length > 0 && (
-        <div 
-          className={`
-            transition-all duration-300
-            ${isExpanded ? 'opacity-100' : 'opacity-0 h-0'}
-          `}
-        >
-          {isExpanded && (
-            <div className="border-l-2 border-gray-200">
-              {childNodes.map(child => (
-                <TreeNode
-                  key={child.id}
-                  node={child}
-                  allNodes={allNodes}
-                  level={level + 1}
-                  onToggle={onToggle}
-                  onAddChild={onAddChild}
-                  onNodeDrop={onNodeDrop}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  expandedNodes={expandedNodes}
-                  onToggleExpand={onToggleExpand}
-                />
-              ))}
-            </div>
-          )}
+        <div className="border-l-2 border-gray-200">
+          {childNodes.map(child => (
+            <TreeNode
+              key={child.id}
+              node={child}
+              allNodes={allNodes}
+              level={level + 1}
+              onToggle={onToggle}
+              onAddChild={onAddChild}
+              onNodeDrop={onNodeDrop}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              expandedNodes={expandedNodes}
+              onToggleExpand={onToggleExpand}
+              isSelectionMode={isSelectionMode}
+              isSelected={isSelected}
+              onSelect={onSelect}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -279,6 +308,9 @@ const GoalTreeNodeView: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedParent, setSelectedParent] = useState<{ id: string; title: string } | null>(null);
   const [editingNode, setEditingNode] = useState<NodeItem | null>(null);
+  const [selectedNodes, setSelectedNodes] = useState<Set<string>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+
   const [nodes, setNodes] = useState<Record<string, NodeItem>>(() => {
     const savedNodes = localStorage.getItem('goalTreeNodes');
     return savedNodes ? JSON.parse(savedNodes) : {
@@ -317,6 +349,57 @@ const GoalTreeNodeView: React.FC = () => {
   };
   });
 
+  const [zoom, setZoom] = useState(() => {
+    const saved = localStorage.getItem('gtm-zoom');
+    return saved ? parseFloat(saved) : 1;
+  });
+  
+  const handleZoomIn = () => {
+    setZoom(prev => {
+      const newZoom = Math.min(prev + 0.1, 2);
+      localStorage.setItem('gtm-zoom', String(newZoom));
+      return newZoom;
+    });
+  };
+  
+  const handleZoomOut = () => {
+    setZoom(prev => {
+      const newZoom = Math.max(prev - 0.1, 0.5);
+      localStorage.setItem('gtm-zoom', String(newZoom));
+      return newZoom;
+    });
+  };
+
+  const toggleSelection = (nodeId: string) => {
+    setSelectedNodes(prev => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) {
+        next.delete(nodeId);
+      } else {
+        next.add(nodeId);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDelete = () => {
+    setNodes(prev => {
+      const newNodes = { ...prev };
+      selectedNodes.forEach(nodeId => {
+        const node = newNodes[nodeId];
+        if (node.parentId) {
+          const parent = newNodes[node.parentId];
+          parent.children = parent.children.filter(id => id !== nodeId);
+        }
+        delete newNodes[nodeId];
+      });
+      return newNodes;
+    });
+    
+    setRootOrder(prev => prev.filter(id => !selectedNodes.has(id)));
+    setSelectedNodes(new Set());
+    setIsSelectionMode(false);
+  };
 
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(() => {
     const saved = localStorage.getItem('goalTreeExpanded');
@@ -334,7 +417,6 @@ const GoalTreeNodeView: React.FC = () => {
       return next;
     });
   };
-
 
   // Initialize rootOrder with proper defaults
   const [rootOrder, setRootOrder] = useState<string[]>(() => {
@@ -512,6 +594,53 @@ const handleNodeDrop = (draggedId: string, targetId: string, dropPosition: 'befo
     setShowDeleteConfirm(true);
   };
 
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    
+    // Clean and split content
+    const lines = text
+      .split('\n')
+      .map(line => 
+        // Remove special characters and extra whitespace
+        line.replace(/[^\w\s-]/g, '').trim()
+      )
+      .filter(line => 
+        // Keep only non-empty lines with actual content
+        line && line.length > 0 && !line.match(/^[-•*+\s]+$/)
+      );
+  
+    // Get next available ID
+    let nextId = Math.max(0, ...Object.keys(nodes).map(Number)) + 1;
+  
+    lines.forEach(line => {
+      try {
+        const newId = String(nextId++);
+        
+        const newNode: NodeItem = {
+          id: newId,
+          title: line,
+          type: 'task',
+          status: 'active',
+          children: [],
+          parentId: null
+        };
+  
+        // Update nodes state
+        setNodes(prev => ({
+          ...prev,
+          [newId]: newNode
+        }));
+  
+        // Add to root order
+        setRootOrder(prev => [...prev, newId]);
+  
+      } catch (error) {
+        console.error('Error creating node:', error);
+      }
+    });
+  };
+
   const confirmDelete = () => {
     if (!nodeToDelete) return;
   
@@ -562,97 +691,178 @@ const handleNodeDrop = (draggedId: string, targetId: string, dropPosition: 'befo
  }, []);
 
  return (
- <div className="p-4">
- <Card>
-   <CardHeader className="flex flex-row items-center justify-between">
-     <CardTitle>🎯 GTM</CardTitle>
-     <button 
-       onClick={() => setShowAddForm(true)}
-       title="⌘/Ctrl + A"
-       className="flex items-center gap-2 px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-     >
-       <PlusCircle className="w-4 h-4" />
-       Add Anything
-     </button>
-   </CardHeader>
-   <CardContent>
-     <div className="mt-4">
-       {rootOrder.length > 0 ? rootOrder.map(nodeId => (
-         <TreeNode
-           key={nodeId}
-           node={nodes[nodeId]}
-           allNodes={nodes}
-           onToggle={(id) => console.log('toggled:', id)}
-           onAddChild={(parentId, parentTitle) => {
-             setSelectedParent({ id: parentId, title: parentTitle });
-             setShowAddForm(true);
-           }}
-           onNodeDrop={handleNodeDrop}
-           onEdit={handleEdit}
-           onDelete={handleDelete}
-           expandedNodes={expandedNodes} 
-           onToggleExpand={handleToggleExpand} 
-         />
-       )) : Object.values(nodes).filter(node => !node.parentId).map(node => (
-         <TreeNode
-           key={node.id}
-           node={node}
-           allNodes={nodes}
-           onToggle={(id) => console.log('toggled:', id)}
-           onAddChild={(parentId, parentTitle) => {
-             setSelectedParent({ id: parentId, title: parentTitle });
-             setShowAddForm(true);
-           }}
-           onNodeDrop={handleNodeDrop}
-           onEdit={handleEdit}
-           onDelete={handleDelete}
-           expandedNodes={expandedNodes}
-           onToggleExpand={handleToggleExpand}       
-         />
-       ))}
-     </div>
-   </CardContent>
- </Card>
+  <div className="p-4">
+    <Card
+      onPaste={handlePaste}
+      tabIndex={0}
+      className="focus:outline-none transition-colors relative"
+    >
+      <CardHeader className="flex flex-row items-center justify-between border-b">
+        <div className="flex items-center gap-2">
+          <CardTitle>🎯 GTM</CardTitle>
+          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+            ⌘V to paste text with newlines
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Zoom controls always visible */}
+          <div className="flex items-center gap-1 border rounded-lg overflow-hidden">
+            <button
+              onClick={handleZoomOut}
+              className="px-2 py-1 hover:bg-gray-100"
+              title="Zoom Out"
+            >
+              -
+            </button>
+            <span className="px-2 text-sm text-gray-600">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              onClick={handleZoomIn}
+              className="px-2 py-1 hover:bg-gray-100"
+              title="Zoom In"
+            >
+              +
+            </button>
+          </div>
 
- {showDeleteConfirm && nodeToDelete && (
-   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-     <div className="bg-white p-6 rounded-lg w-96">
-       <h3 className="text-lg font-medium mb-4">Confirm Delete</h3>
-       <p className="mb-4">
-         Are you sure you want to delete &quot;{nodeToDelete.title}&quot; and all its children?
-       </p>
-       <div className="flex justify-end gap-2">
-         <button
-           onClick={() => setShowDeleteConfirm(false)}
-           className="px-4 py-2 border rounded hover:bg-gray-100"
-         >
-           Cancel
-         </button>
-         <button
-           onClick={confirmDelete}
-           className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-         >
-           Delete
-         </button>
-       </div>
-     </div>
-   </div>
- )}
+          {/* Selection mode controls */}
+          {isSelectionMode ? (
+            <>
+              <button
+                onClick={handleBulkDelete}
+                disabled={selectedNodes.size === 0}
+                className="px-3 py-1 bg-red-500 text-white rounded-lg disabled:opacity-50"
+              >
+                Delete ({selectedNodes.size})
+              </button>
+              <button
+                onClick={() => {
+                  setIsSelectionMode(false);
+                  setSelectedNodes(new Set());
+                }}
+                className="px-3 py-1 border rounded-lg"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setIsSelectionMode(true)}
+                className="px-3 py-1 border rounded-lg"
+              >
+                Select Multiple
+              </button>
+              <button 
+                onClick={() => setShowAddForm(true)}
+                title="⌘/Ctrl + A"
+                className="flex items-center gap-2 px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              >
+                <PlusCircle className="w-4 h-4" />
+                Add Anything
+              </button>
+            </>
+          )}
+        </div>
+      </CardHeader>
 
- {showAddForm && (
-   <AddNodeForm
-     onClose={() => {
-       setShowAddForm(false);
-       setSelectedParent(null);
-       setEditingNode(null);
-     }}
-     onAdd={handleAddNode}
-     parentTitle={selectedParent?.title}
-     editNode={editingNode}
-   />
- )}
-</div>
+      <CardContent>
+        <div className="mt-4"
+           style={{
+            transform: `scale(${zoom})`,
+            transformOrigin: 'top left',
+            transition: 'transform 0.2s'
+          }}
+          >
+          
+        {rootOrder.length > 0 ? rootOrder.map(nodeId => (
+  <TreeNode
+    key={nodeId}
+    node={nodes[nodeId]}
+    allNodes={nodes}
+    onToggle={(id) => console.log('toggled:', id)}
+    onAddChild={(parentId, parentTitle) => {
+      setSelectedParent({ id: parentId, title: parentTitle });
+      setShowAddForm(true);
+    }}
+    onNodeDrop={handleNodeDrop}
+    onEdit={handleEdit}
+    onDelete={handleDelete}
+    expandedNodes={expandedNodes}
+    onToggleExpand={handleToggleExpand}
+    isSelectionMode={isSelectionMode}
+    isSelected={selectedNodes.has(nodeId)}
+    onSelect={toggleSelection}
+  />
+)) : Object.values(nodes)
+    .filter(node => !node.parentId)
+    .map(node => (
+      <TreeNode
+        key={node.id}
+        node={node}
+        allNodes={nodes}
+        onToggle={(id) => console.log('toggled:', id)}
+        onAddChild={(parentId, parentTitle) => {
+          setSelectedParent({ id: parentId, title: parentTitle });
+          setShowAddForm(true);
+        }}
+        onNodeDrop={handleNodeDrop}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        expandedNodes={expandedNodes}
+        onToggleExpand={handleToggleExpand}
+        isSelectionMode={isSelectionMode}
+        isSelected={selectedNodes.has(node.id)}
+        onSelect={toggleSelection}
+      />
+    ))}
+        </div>
+      </CardContent>
+    </Card>
+
+    {/* Delete Confirmation Modal */}
+    {showDeleteConfirm && nodeToDelete && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg w-96">
+          <h3 className="text-lg font-medium mb-4">Confirm Delete</h3>
+          <p className="mb-4">
+            Are you sure you want to delete &quot;{nodeToDelete.title}&quot; and all its children?
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              className="px-4 py-2 border rounded hover:bg-gray-100"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Add/Edit Node Modal */}
+    {showAddForm && (
+      <AddNodeForm
+        onClose={() => {
+          setShowAddForm(false);
+          setSelectedParent(null);
+          setEditingNode(null);
+        }}
+        onAdd={handleAddNode}
+        parentTitle={selectedParent?.title}
+        editNode={editingNode}
+      />
+    )}
+  </div>
 );
+
 };
 
 export default GoalTreeNodeView;
