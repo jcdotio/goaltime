@@ -22,7 +22,7 @@ export default function Dashboard() {
   return (
     <div>
       <header className="flex justify-between p-4">
-        <h1>Dashboard</h1>
+        <h1>🎯 GoalTimeMoney</h1>
         <UserButton afterSignOutUrl="/" />
       </header>
       <GoalTreeNodeView />

@@ -1,5 +1,15 @@
-import { SignUp } from "@clerk/nextjs";
+'use client';
 
-export default function Page() {
-  return <SignUp />;
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+export default function SignUpPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Redirect to home page with modal
+    router.push('/?signup=true');
+  }, [router]);
+
+  return null;
 }

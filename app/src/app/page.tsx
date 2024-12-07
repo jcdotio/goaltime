@@ -1,13 +1,25 @@
 "use client"
 
 import { X, LogInIcon } from 'lucide-react';
-import { useState, useCallback } from 'react';
-import { useAuth, SignIn } from "@clerk/nextjs";
+import { useEffect, useState, useCallback } from 'react';
+import { useAuth, SignIn, SignUp } from "@clerk/nextjs";
 
 export default function HomePage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
+  const [showSignUp, setShowSignUp] = useState(false);
   const { userId, isLoaded } = useAuth();
+
+  useEffect(() => {
+    // Check URL parameters for signup
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('signup') === 'true') {
+      setShowSignUp(true);
+    }
+    if (params.get('signin') === 'true') {
+      setShowSignIn(true);
+    }
+  }, []);
 
   // Use a callback for login click
   const handleLoginClick = useCallback((e: React.MouseEvent) => {
@@ -82,7 +94,7 @@ export default function HomePage() {
       </header>
 
       <main className="flex-1 container mx-auto p-4">
-        Welcome to GTM     
+             
         <iframe 
           width="560" 
           height="315" 
@@ -95,20 +107,45 @@ export default function HomePage() {
         />
       </main>
 
-      {/* Sign In Modal */}
-      {showSignIn && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="relative bg-transparent rounded-lg p-4 max-w-md w-full">
-            <button
-              onClick={() => setShowSignIn(false)}
-              className="absolute top-2 right-2 text-white hover:text-gray-200 z-50"
-            >
-              ×
-            </button>
-            <SignIn routing="hash" />
-          </div>
-        </div>
-      )}
+{/* Sign In Modal */}
+{showSignIn && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="relative bg-transparent rounded-lg p-4 max-w-md w-full">
+      <button
+        onClick={() => setShowSignIn(false)}
+        className="absolute top-2 right-2 text-white hover:text-gray-200 z-50 rounded-full hover:bg-white/10 p-1 transition-colors"
+      >
+        <X className="w-5 h-5" />
+      </button>
+      <SignIn 
+        routing="hash"
+        afterSignInUrl="/dashboard"
+        signUpUrl="/sign-up"
+      />
+    </div>
+  </div>
+)}
+
+{/* Sign Up Modal */}
+{showSignUp && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className="relative bg-transparent rounded-lg p-4 max-w-md w-full">
+      <button
+        onClick={() => setShowSignUp(false)}
+        className="absolute top-2 right-2 text-white hover:text-gray-200 z-50 rounded-full hover:bg-white/10 p-1 transition-colors"
+      >
+        <X className="w-5 h-5" />
+      </button>
+      <SignUp 
+        routing="hash"
+        afterSignUpUrl="/dashboard"
+        signInUrl="/sign-in"
+      />
+    </div>
+  </div>
+)}
+
+
     </div>
   );
 }
