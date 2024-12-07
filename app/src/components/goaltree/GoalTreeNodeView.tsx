@@ -567,9 +567,8 @@ const handleNodeDrop = (draggedId: string, targetId: string, dropPosition: 'befo
       })
     }));
 
-    // Update rootOrder only for root level nodes
     if (!parentId) {
-      setRootOrder(prev => [...prev, newId]);
+      setRootOrder(prev => [newId, ...prev]); // Add to start instead of end
     }
   };
 
@@ -699,7 +698,7 @@ const handleNodeDrop = (draggedId: string, targetId: string, dropPosition: 'befo
       tabIndex={0}
       className="focus:outline-none transition-colors relative"
     >
-      <CardHeader className="flex flex-row items-center justify-between border-b">
+      <CardHeader className="flex flex-row items-center justify-between border-b pt-0 pb-4">
         <div className="flex items-center gap-2">
           <CardTitle></CardTitle>
           <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
@@ -771,6 +770,18 @@ const handleNodeDrop = (draggedId: string, targetId: string, dropPosition: 'befo
       </CardHeader>
 
       <CardContent>
+      <div 
+         className="
+            overflow-y-auto 
+            max-h-[calc(100vh-12rem)]
+            no-scrollbar
+          "
+          style={{
+            scrollBehavior: 'smooth',
+            overscrollBehavior: 'contain' // Prevents scroll chaining
+
+          }}
+        >
         <div className="mt-4"
            style={{
             transform: `scale(${zoom})`,
@@ -820,6 +831,7 @@ const handleNodeDrop = (draggedId: string, targetId: string, dropPosition: 'befo
         onSelect={toggleSelection}
       />
     ))}
+        </div>
         </div>
       </CardContent>
     </Card>
