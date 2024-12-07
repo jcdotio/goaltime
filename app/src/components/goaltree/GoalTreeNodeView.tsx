@@ -783,7 +783,9 @@ const handleNodeDrop = (draggedId: string, targetId: string, dropPosition: 'befo
           "
           style={{
             scrollBehavior: 'smooth',
-            overscrollBehavior: 'contain' // Prevents scroll chaining
+            overscrollBehavior: 'contain', // Prevents scroll chaining
+            WebkitOverflowScrolling: 'touch',
+            msOverflowStyle: '-ms-autohiding-scrollbar'
 
           }}
         >

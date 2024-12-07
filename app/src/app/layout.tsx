@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { ClerkProvider } from '@clerk/nextjs'
+import { VersionInfo } from '@/components/ui/VersionInfo';
+
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -34,11 +36,19 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" className="overflow-hidden h-full">
         <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+          className={`${geistSans.variable} ${geistMono.variable} antialiased h-full overflow-hidden`}
+          style={{ overscrollBehavior: 'none' }}
         >
-          {children}
+          <div className="flex flex-col h-full">
+            <main className="flex-1 overflow-hidden">
+              {children}
+            </main>
+            <footer className="flex justify-center py-2 border-t border-light-blue-500 border-opacity-75 text-xs">
+              <VersionInfo />
+            </footer>
+          </div>
         </body>
       </html>
     </ClerkProvider>
