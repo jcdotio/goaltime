@@ -698,76 +698,81 @@ const handleNodeDrop = (draggedId: string, targetId: string, dropPosition: 'befo
       tabIndex={0}
       className="focus:outline-none transition-colors relative"
     >
-      <CardHeader className="flex flex-row items-center justify-between border-b pt-0 pb-4">
-        <div className="flex items-center gap-2">
-          <CardTitle></CardTitle>
-          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-            ⌘V to paste text with newlines <br></br>
-            ⌘A to add a new goal
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Zoom controls always visible */}
-          <div className="flex items-center gap-1 border rounded-lg overflow-hidden">
-            <button
-              onClick={handleZoomOut}
-              className="px-2 py-1 hover:bg-gray-100"
-              title="Zoom Out"
-            >
-              -
-            </button>
-            <span className="px-2 text-sm text-gray-600">
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              onClick={handleZoomIn}
-              className="px-2 py-1 hover:bg-gray-100"
-              title="Zoom In"
-            >
-              +
-            </button>
-          </div>
+      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b pt-0 pb-4 space-y-2 sm:space-y-0">
+  {/* Left side */}
+  <div className="flex items-center gap-2 w-full sm:w-auto">
+    <CardTitle></CardTitle>
+    <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded hidden sm:inline">
+      ⌘A quick add
+    </div>
+    <div className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded hidden sm:inline">
+      Paste text with newlines to entery many
+    </div>
+  </div>
 
-          {/* Selection mode controls */}
-          {isSelectionMode ? (
-            <>
-              <button
-                onClick={handleBulkDelete}
-                disabled={selectedNodes.size === 0}
-                className="px-3 py-1 bg-red-500 text-white rounded-lg disabled:opacity-50"
-              >
-                Delete ({selectedNodes.size})
-              </button>
-              <button
-                onClick={() => {
-                  setIsSelectionMode(false);
-                  setSelectedNodes(new Set());
-                }}
-                className="px-3 py-1 border rounded-lg"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={() => setIsSelectionMode(true)}
-                className="px-3 py-1 border rounded-lg"
-              >
-                Select Multiple
-              </button>
-              <button 
-                onClick={() => setShowAddForm(true)}
-                title="⌘/Ctrl + A"
-                className="flex items-center gap-2 px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-              >
-                <PlusCircle className="w-4 h-4" />
-                Add Anything
-              </button>
-            </>
-          )}
-        </div>
-      </CardHeader>
+  {/* Right side controls */}
+  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+    {/* Zoom controls */}
+    <div className="flex items-center gap-1 border rounded-lg overflow-hidden">
+      <button
+        onClick={handleZoomOut}
+        className="px-3 py-2 sm:px-2 sm:py-1 hover:bg-gray-100 text-sm"
+        title="Zoom Out"
+      >
+        -
+      </button>
+      <span className="px-2 text-sm text-gray-600 min-w-[60px] text-center">
+        {Math.round(zoom * 100)}%
+      </span>
+      <button
+        onClick={handleZoomIn}
+        className="px-3 py-2 sm:px-2 sm:py-1 hover:bg-gray-100 text-sm"
+        title="Zoom In"
+      >
+        +
+      </button>
+    </div>
+
+    {/* Selection mode controls */}
+    {isSelectionMode ? (
+      <div className="flex items-center gap-2 w-full sm:w-auto">
+        <button
+          onClick={handleBulkDelete}
+          disabled={selectedNodes.size === 0}
+          className="flex-1 sm:flex-none px-4 py-2 sm:px-3 sm:py-1 bg-red-500 text-white rounded-lg disabled:opacity-50"
+        >
+          Delete ({selectedNodes.size})
+        </button>
+        <button
+          onClick={() => {
+            setIsSelectionMode(false);
+            setSelectedNodes(new Set());
+          }}
+          className="flex-1 sm:flex-none px-4 py-2 sm:px-3 sm:py-1 border rounded-lg"
+        >
+          Cancel
+        </button>
+      </div>
+    ) : (
+      <div className="flex items-center gap-2 w-full sm:w-auto">
+        <button
+          onClick={() => setIsSelectionMode(true)}
+          className="flex-1 sm:flex-none px-4 py-2 sm:px-3 sm:py-1 border rounded-lg"
+        >
+          Select Multiple
+        </button>
+        <button 
+          onClick={() => setShowAddForm(true)}
+          title="⌘/Ctrl + A"
+          className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 sm:px-3 sm:py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+        >
+          <PlusCircle className="w-3 h-3" />
+          <span>Add</span>
+        </button>
+      </div>
+    )}
+  </div>
+</CardHeader>
 
       <CardContent>
       <div 
