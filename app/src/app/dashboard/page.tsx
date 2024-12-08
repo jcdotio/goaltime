@@ -22,7 +22,16 @@ export default function Dashboard() {
   return (
     <div>
       <header className="flex justify-between p-4">
-        <h1>🎯 GoalTimeMoney</h1>
+      <span className="inline-flex items-center">
+      <h1 className="text-xl font-semibold">
+          <div className="text-xl font-bold space-y-2">
+          <span className="inline-flex items-center">
+          <span className="-translate-y-0.5">🎯</span> {/* Adjust the Y translation */}
+          <span className="ml-1">GoalTimeMoney</span>
+          </span>
+        </div>
+          </h1>
+      </span>
         <UserButton afterSignOutUrl="/" />
       </header>
       <GoalTreeNodeView />

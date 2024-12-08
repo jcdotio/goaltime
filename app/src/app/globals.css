@@ -59,9 +59,14 @@
   .no-scrollbar {
       -ms-overflow-style: none;  /* IE and Edge */
       scrollbar-width: none;  /* Firefox */
-}
+  }  
 
-html, body {
+  .smooth-scroll {
+    @apply overflow-auto;
+    scroll-behavior: smooth  
+   }
+
+html, body {  
   overflow: hidden;
   height: 100%;
   overscroll-behavior: none;

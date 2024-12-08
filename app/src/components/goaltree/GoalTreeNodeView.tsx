@@ -757,7 +757,6 @@ const handleNodeDrop = (draggedId: string, targetId: string, dropPosition: 'befo
       <div className="flex items-center gap-2 w-full sm:w-auto">
         <button
           onClick={() => setIsSelectionMode(true)}
-          className="flex-1 sm:flex-none px-4 py-2 sm:px-3 sm:py-1 border rounded-lg"
         >
           Select Multiple
         </button>
@@ -777,7 +776,6 @@ const handleNodeDrop = (draggedId: string, targetId: string, dropPosition: 'befo
       <CardContent>
       <div 
          className="
-            overflow-y-auto 
             max-h-[calc(100vh-12rem)]
             no-scrollbar
           "

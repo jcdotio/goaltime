@@ -36,13 +36,13 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" className="overflow-hidden h-full">
+      <html lang="en" className="verflow-hidden h-full">
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased h-full overflow-hidden`}
           style={{ overscrollBehavior: 'none' }}
         >
           <div className="flex flex-col h-full">
-            <main className="flex-1 overflow-hidden">
+            <main className="flex-1 verflow-hidden smooth-scroll no-scrollbar">
               {children}
             </main>
             <footer className="flex justify-center py-2 border-t border-light-blue-500 border-opacity-75 text-xs">
