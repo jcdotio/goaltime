@@ -1,6 +1,6 @@
 "use client"
 
-import { X, LogInIcon, SquareUserIcon, PlayCircle } from 'lucide-react';
+import { X, LogInIcon, SquareUserIcon } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth, SignIn, SignUp } from "@clerk/nextjs";
 import { VideoCard } from '@/components/videocard';
